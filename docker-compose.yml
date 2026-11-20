@@ -6,6 +6,7 @@ services:
       - "8080:8080"
     environment:
       BIND_HOST: "0.0.0.0"
+      TICKET_PREFIX: "IT-"
       # Replace these before first start; they bootstrap the first admin
       # account on an empty database.
       ADMIN_USERNAME: "admin"

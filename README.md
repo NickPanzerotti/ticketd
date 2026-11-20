@@ -32,7 +32,7 @@ docker run -d --name ticketd \
   -p 8080:8080 \
   -v ticketd-data:/data \
   -e BIND_HOST=0.0.0.0 \
-  -e TICKET_PREFIX='NP-' \
+  -e TICKET_PREFIX='IT-' \
   -e ADMIN_USERNAME=admin \
   -e ADMIN_PASSWORD='change-me' \
   ghcr.io/nickpanzerotti/ticketd:latest
