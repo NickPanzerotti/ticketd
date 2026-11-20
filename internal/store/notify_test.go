@@ -20,6 +20,7 @@ func TestNotifySettingsRoundTrip(t *testing.T) {
 		Enabled: true, SMTPHost: "mail.example.com", SMTPPort: 465,
 		SMTPUser: "relay", SMTPPassword: "secret", SMTPFrom: "ticketd@example.com",
 		PublicURL: "https://it.example.com", NotifyScope: NotifyScopeCreator,
+		SMTPCACert: "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----", SMTPInsecureTLS: true,
 	}
 	if err := s.SetNotifySettings(want); err != nil {
 		t.Fatal(err)

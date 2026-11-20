@@ -30,6 +30,13 @@
       <label class="field-label" for="s-from">From address <span class="muted">(defaults to the username)</span></label>
       <input class="input" id="s-from" name="smtp_from" value="{{.D.S.SMTPFrom}}" placeholder="ticketd@example.com" autocomplete="off">
 
+      <h3 class="form-subhead">Certificate options</h3>
+      <p class="muted small">Only needed for mail servers with private or self-signed certificates.
+        Public providers (office365, gmail, …) work without any of this.</p>
+      <label class="field-label" for="s-ca">CA certificate of the mail server (PEM) <span class="muted">(optional)</span></label>
+      <textarea class="input" id="s-ca" name="smtp_ca_pem" rows="6" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----&#10;…">{{.D.S.SMTPCACert}}</textarea>
+      <label class="field-check"><input type="checkbox" name="smtp_tls_insecure" value="1"{{if .D.S.SMTPInsecureTLS}} checked{{end}}> Skip certificate verification <span class="muted">(less secure; prefer adding the CA above)</span></label>
+
       <label class="field-label" for="s-url">Public URL <span class="muted">(optional, adds links to emails)</span></label>
       <input class="input" id="s-url" name="public_url" value="{{.D.S.PublicURL}}" placeholder="https://it.example.com" autocomplete="off">
 

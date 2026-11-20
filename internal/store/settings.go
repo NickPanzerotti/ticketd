@@ -9,14 +9,16 @@ import (
 // NotifySettings is the email-notification configuration, editable by admins
 // on the settings page and stored in the settings table.
 type NotifySettings struct {
-	Enabled      bool // master switch
-	SMTPHost     string
-	SMTPPort     int // 587 = STARTTLS (upgrade if offered), 465 = implicit TLS
-	SMTPUser     string
-	SMTPPassword string // stored in plain text in the local database file
-	SMTPFrom     string // From: address; defaults to SMTPUser when empty
-	PublicURL    string // base URL used in email links, e.g. https://it.example.com
-	NotifyScope  string // "creator" or "participants"
+	Enabled         bool // master switch
+	SMTPHost        string
+	SMTPPort        int // 587 = STARTTLS (upgrade if offered), 465 = implicit TLS
+	SMTPUser        string
+	SMTPPassword    string // stored in plain text in the local database file
+	SMTPFrom        string // From: address; defaults to SMTPUser when empty
+	PublicURL       string // base URL used in email links, e.g. https://it.example.com
+	NotifyScope     string // "creator" or "participants"
+	SMTPCACert      string // optional PEM CA certificate for private mail servers
+	SMTPInsecureTLS bool   // skip TLS verification (self-signed certs; opt-in)
 }
 
 const (
@@ -51,6 +53,8 @@ func (s *Store) GetNotifySettings() (NotifySettings, error) {
 	ns.SMTPPassword = vals["smtp_pass"]
 	ns.SMTPFrom = vals["smtp_from"]
 	ns.PublicURL = vals["public_url"]
+	ns.SMTPCACert = vals["smtp_ca_pem"]
+	ns.SMTPInsecureTLS = vals["smtp_tls_insecure"] == "1"
 	if vals["notify_scope"] == NotifyScopeCreator {
 		ns.NotifyScope = NotifyScopeCreator
 	}
@@ -76,6 +80,10 @@ func (s *Store) SetNotifySettings(ns NotifySettings) error {
 	if ns.Enabled {
 		enabled = "1"
 	}
+	insecure := "0"
+	if ns.SMTPInsecureTLS {
+		insecure = "1"
+	}
 	if err := s.tx(func(tx *sql.Tx) error {
 		for _, kv := range []struct{ k, v string }{
 			{"notify_enabled", enabled},
@@ -85,6 +93,8 @@ func (s *Store) SetNotifySettings(ns NotifySettings) error {
 			{"notify_scope", scope},
 			{"smtp_from", ns.SMTPFrom},
 			{"public_url", ns.PublicURL},
+			{"smtp_ca_pem", ns.SMTPCACert},
+			{"smtp_tls_insecure", insecure},
 		} {
 			if _, err := tx.Exec(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`, kv.k, kv.v, kv.v); err != nil {
 				return err

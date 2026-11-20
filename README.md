@@ -79,6 +79,12 @@ From address, an optional public base URL that adds ticket links to emails, an
 enable/disable switch, and who gets notified (ticket creator only, or everyone involved
 in the ticket). A **Send test email** button verifies the setup instantly.
 
+The container ships a standard CA trust store, so public providers (Microsoft 365,
+Gmail, …) work with full certificate verification out of the box. For mail servers
+with a private or self-signed certificate, **Certificate options** on the settings
+page accepts your CA certificate (PEM) — hostname verification stays on — or, less
+securely, can skip certificate verification entirely.
+
 Sending is asynchronous and best-effort: the app never blocks or fails a reply because
 a mail server is unreachable (failures go to the container log). Internal notes never
 generate email. SMTP credentials are stored in the local database file alongside the

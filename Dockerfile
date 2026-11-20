@@ -15,11 +15,15 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X ticketd/internal/buildinfo.Version=$VERSION" -mod=vendor -o /out/ticketd .
 
 # ---- Runtime stage ---------------------------------------------------------
-# The binary embeds templates/ and static/ via go:embed, so the final image
-# needs nothing but the single static binary. All state lives in /data.
+# The binary embeds templates/ and static/ via go:embed, so the only extra
+# file the final image needs is a CA trust store: without it Go cannot
+# verify any TLS certificate (SMTP STARTTLS/TLS). The bundle is Alpine's
+# copy of the Mozilla root set, taken from the build stage. All state
+# lives in /data.
 FROM scratch
 
 COPY --from=build /out/ticketd /ticketd
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 # Store all state (SQLite DB + uploads) on the mounted volume.
 ENV DATA_DIR=/data

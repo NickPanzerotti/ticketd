@@ -268,14 +268,16 @@ func settingsFromForm(r *http.Request) store.NotifySettings {
 		scope = store.NotifyScopeCreator
 	}
 	return store.NotifySettings{
-		Enabled:      r.FormValue("enabled") == "1",
-		SMTPHost:     strings.TrimSpace(r.FormValue("smtp_host")),
-		SMTPPort:     port,
-		SMTPUser:     strings.TrimSpace(r.FormValue("smtp_user")),
-		SMTPPassword: r.FormValue("smtp_pass"), // empty means "keep stored"
-		SMTPFrom:     strings.TrimSpace(r.FormValue("smtp_from")),
-		PublicURL:    strings.TrimSpace(r.FormValue("public_url")),
-		NotifyScope:  scope,
+		Enabled:         r.FormValue("enabled") == "1",
+		SMTPHost:        strings.TrimSpace(r.FormValue("smtp_host")),
+		SMTPPort:        port,
+		SMTPUser:        strings.TrimSpace(r.FormValue("smtp_user")),
+		SMTPPassword:    r.FormValue("smtp_pass"), // empty means "keep stored"
+		SMTPFrom:        strings.TrimSpace(r.FormValue("smtp_from")),
+		PublicURL:       strings.TrimSpace(r.FormValue("public_url")),
+		NotifyScope:     scope,
+		SMTPCACert:      strings.TrimSpace(r.FormValue("smtp_ca_pem")),
+		SMTPInsecureTLS: r.FormValue("smtp_tls_insecure") == "1",
 	}
 }
 
@@ -302,6 +304,11 @@ func (s *Server) handleSettingsSave(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/admin/settings", http.StatusSeeOther)
 			return
 		}
+	}
+	if _, err := notify.ParseCA(ns.SMTPCACert); err != nil {
+		s.pushFlash(r, "err", "CA certificate: "+err.Error())
+		http.Redirect(w, r, "/admin/settings", http.StatusSeeOther)
+		return
 	}
 	if err := s.store.SetNotifySettings(ns); err != nil {
 		log.Printf("save settings: %v", err)
@@ -335,7 +342,11 @@ func (s *Server) handleSettingsTest(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Printf("test email: %v", err)
-		s.pushFlash(r, "err", "The test email failed: "+err.Error())
+		hint := ""
+		if strings.Contains(err.Error(), "certificate signed by unknown authority") {
+			hint = " — add your mail server's CA certificate under Certificate options, or enable 'skip verification' if it is self-signed."
+		}
+		s.pushFlash(r, "err", "The test email failed: "+err.Error()+hint)
 	} else {
 		s.pushFlash(r, "ok", "Test email sent to "+to+".")
 	}

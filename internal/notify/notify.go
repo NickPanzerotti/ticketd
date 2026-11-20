@@ -4,6 +4,8 @@ package notify
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -30,6 +32,37 @@ type Mailer interface {
 // SMTPMailer talks to the configured SMTP server.
 type SMTPMailer struct{}
 
+// ParseCA builds a certificate pool from a PEM bundle; empty input means
+// "use the embedded root store".
+func ParseCA(pem string) (*x509.CertPool, error) {
+	if strings.TrimSpace(pem) == "" {
+		return nil, nil
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(pem)) {
+		return nil, errors.New("that does not look like a PEM certificate (expected a block starting with -----BEGIN CERTIFICATE-----)")
+	}
+	return pool, nil
+}
+
+// tlsConfig applies the admin's certificate policy: the runtime trust
+// store by default (the image ships a CA bundle), an explicit CA pool
+// when provided, verification skipped only when the admin opted in.
+func tlsConfig(cfg store.NotifySettings) (*tls.Config, error) {
+	tc := &tls.Config{ServerName: cfg.SMTPHost}
+	pool, err := ParseCA(cfg.SMTPCACert)
+	if err != nil {
+		return nil, err
+	}
+	if pool != nil {
+		tc.RootCAs = pool
+	}
+	if cfg.SMTPInsecureTLS {
+		tc.InsecureSkipVerify = true
+	}
+	return tc, nil
+}
+
 func (SMTPMailer) Send(cfg store.NotifySettings, msg Message) error {
 	if len(msg.To) == 0 {
 		return nil
@@ -44,13 +77,17 @@ func (SMTPMailer) Send(cfg store.NotifySettings, msg Message) error {
 	addr := net.JoinHostPort(cfg.SMTPHost, strconv.Itoa(cfg.SMTPPort))
 	implicitTLS := cfg.SMTPPort == 465
 
+	tlsCfg, err := tlsConfig(cfg)
+	if err != nil {
+		return err
+	}
 	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
 	if err != nil {
 		return fmt.Errorf("smtp dial %s: %w", addr, err)
 	}
 	defer conn.Close()
 	if implicitTLS {
-		tconn := tls.Client(conn, &tls.Config{ServerName: cfg.SMTPHost})
+		tconn := tls.Client(conn, tlsCfg)
 		if err := tconn.Handshake(); err != nil {
 			return fmt.Errorf("smtp tls handshake: %w", err)
 		}
@@ -63,7 +100,7 @@ func (SMTPMailer) Send(cfg store.NotifySettings, msg Message) error {
 	defer c.Quit()
 	if !implicitTLS {
 		if ok, _ := c.Extension("STARTTLS"); ok {
-			if err := c.StartTLS(&tls.Config{ServerName: cfg.SMTPHost}); err != nil {
+			if err := c.StartTLS(tlsCfg); err != nil {
 				return fmt.Errorf("smtp starttls: %w", err)
 			}
 		}

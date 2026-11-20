@@ -1,6 +1,12 @@
 package web
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
+	"math/big"
 	"net/http"
 	"strings"
 	"testing"
@@ -21,6 +27,24 @@ func (m *recordingMailer) Send(cfg store.NotifySettings, msg notify.Message) err
 	}
 	m.sent <- msg
 	return nil
+}
+
+// testCertPEM creates a throwaway self-signed certificate for round-trip tests.
+func testCertPEM(t *testing.T) string {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1), DNSNames: []string{"mail.test"},
+		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
 }
 
 func waitForMail(t *testing.T, m *recordingMailer, d time.Duration) (notify.Message, bool) {
@@ -154,5 +178,27 @@ func TestEmailNotificationsEndToEnd(t *testing.T) {
 	}
 	if _, body := get(t, ac, base+"/admin/settings"); strings.Contains(body, `name="enabled" value="1" checked`) {
 		t.Fatal("enabled without a From address must not be accepted")
+	}
+
+	// certificate options: invalid PEM is rejected, valid PEM round-trips into the form
+	csrf = csrfOf(t, ac, base+"/admin/settings")
+	if resp := post(t, ac, base+"/admin/settings", map[string]string{
+		"csrf": csrf, "enabled": "0", "smtp_ca_pem": "not a certificate",
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("save bad-ca: %d", resp.StatusCode)
+	}
+	if _, body := get(t, ac, base+"/admin/settings"); strings.Contains(body, "not a certificate") {
+		t.Fatal("invalid CA PEM must not be saved")
+	}
+	goodCA := testCertPEM(t)
+	csrf = csrfOf(t, ac, base+"/admin/settings")
+	if resp := post(t, ac, base+"/admin/settings", map[string]string{
+		"csrf": csrf, "smtp_ca_pem": goodCA, "smtp_tls_insecure": "1",
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("save ca: %d", resp.StatusCode)
+	}
+	_, body := get(t, ac, base+"/admin/settings")
+	if !strings.Contains(body, "BEGIN CERTIFICATE") || !strings.Contains(body, `name="smtp_tls_insecure" value="1" checked`) {
+		t.Fatal("certificate options must round-trip through the settings page")
 	}
 }
