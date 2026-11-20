@@ -76,7 +76,7 @@ func (s *Server) listPage(w http.ResponseWriter, r *http.Request, forAdmin bool,
 		base += enc + "&"
 	}
 	qbTab := url.Values{}
-	for _, k := range []string{"q", "priority", "category", "assignee", "sort"} {
+	for _, k := range []string{"q", "priority", "category", "sort"} {
 		if v := r.URL.Query().Get(k); v != "" {
 			qbTab.Set(k, v)
 		}

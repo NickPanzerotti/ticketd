@@ -226,8 +226,8 @@ func TestEndToEndFlow(t *testing.T) {
 		t.Fatal("internal note missing for admin")
 	}
 
-	// Queue filter consistency (regression): tabs, status dropdown and
-	// dashboard links must all reflect the same filter state.
+	// Queue filter consistency (regression): tabs, dropdowns and dashboard
+	// links must all reflect the same filter state.
 	if _, body := get(t, ac, base+"/tickets?status=in_progress"); !strings.Contains(body, "Printer down") ||
 		strings.Contains(body, "VPN access") || strings.Contains(body, "Monitor flicker") {
 		t.Fatal("in_progress filter should list only the in-progress ticket")
@@ -239,11 +239,25 @@ func TestEndToEndFlow(t *testing.T) {
 	if _, body := get(t, ac, base+"/tickets?status=in_progress"); !strings.Contains(body, `value="in_progress" selected`) {
 		t.Fatal("status dropdown must be pre-selected as In progress for status=in_progress")
 	}
-	if _, body := get(t, ac, base+"/tickets?status=unassigned"); !strings.Contains(body, `value="unassigned" selected`) {
-		t.Fatal("status dropdown must be pre-selected as Unassigned for status=unassigned")
+
+	// Unassigned is an assignee filter, not a status: closing an unassigned
+	// ticket must still leave it visible under assignee=none.
+	csrf = csrfOf(t, ac, base+"/tickets/2")
+	if resp := post(t, ac, base+"/tickets/2/status", map[string]string{"csrf": csrf, "status": "closed"}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("close ticket 2: %d", resp.StatusCode)
 	}
-	if _, body := get(t, ac, base+"/tickets?status=unassigned"); !strings.Contains(body, "VPN access") ||
-		strings.Contains(body, "Printer down") {
-		t.Fatal("unassigned filter mismatch")
+	if _, body := get(t, ac, base+"/tickets?assignee=none"); !strings.Contains(body, `value="none" selected`) {
+		t.Fatal("assignee dropdown must be pre-selected as Unassigned for assignee=none")
+	}
+	if _, body := get(t, ac, base+"/tickets?assignee=none"); !strings.Contains(body, "VPN access") ||
+		!strings.Contains(body, "Monitor flicker") || strings.Contains(body, "Printer down") {
+		t.Fatal("unassigned filter must list all unassigned tickets (any status), not assigned ones")
+	}
+	if _, body := get(t, ac, base+"/tickets?assignee=none"); strings.Contains(body, `value="unassigned"`) {
+		t.Fatal("status dropdown must not contain an Unassigned option")
+	}
+	if _, body := get(t, ac, base+"/tickets?assignee=none"); strings.Contains(body, `value="open" selected`) ||
+		strings.Contains(body, `value="closed" selected`) {
+		t.Fatal("status dropdown must stay at Any status for the Unassigned tab")
 	}
 }

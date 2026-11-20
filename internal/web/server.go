@@ -415,7 +415,7 @@ func (s *Server) listFilters(r *http.Request) store.TicketQuery {
 	q := r.URL.Query()
 	tq := store.TicketQuery{Q: strings.TrimSpace(q.Get("q"))}
 	switch v := q.Get("status"); v {
-	case "open", "in_progress", "closed", "unassigned", "reopen":
+	case "open", "in_progress", "closed", "reopen":
 		tq.Status = v
 	}
 	switch v := q.Get("priority"); v {

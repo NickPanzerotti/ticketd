@@ -74,8 +74,6 @@ func (s *Store) ListTickets(q TicketQuery) ([]Ticket, int, error) {
 	case "open", "in_progress", "closed":
 		where = append(where, "t.status = ?")
 		args = append(args, q.Status)
-	case "unassigned":
-		where = append(where, "t.assigned_to IS NULL AND t.status != 'closed'")
 	case "reopen":
 		where = append(where, "t.reopen_requested = 1")
 	}

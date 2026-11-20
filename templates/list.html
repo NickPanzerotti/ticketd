@@ -9,12 +9,13 @@
   </div>
 
   {{if .D.Admin}}
+  {{$s := .D.Values.Get "status"}}{{$as := .D.Values.Get "assignee"}}
   <nav class="tabs">
-    <a class="tab{{if eq (.D.Values.Get "status") "open"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=open">Open</a>
-    <a class="tab{{if eq (.D.Values.Get "status") "unassigned"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=unassigned">Unassigned</a>
-    <a class="tab{{if eq (.D.Values.Get "status") "in_progress"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=in_progress">In Progress</a>
-    <a class="tab{{if eq (.D.Values.Get "status") "closed"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=closed">Closed</a>
-    <a class="tab{{if eq (.D.Values.Get "status") ""}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}">All</a>
+    <a class="tab{{if and (eq $s "open") (eq $as "")}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=open">Open</a>
+    <a class="tab{{if eq $as "none"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}assignee=none">Unassigned</a>
+    <a class="tab{{if and (eq $s "in_progress") (eq $as "")}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=in_progress">In Progress</a>
+    <a class="tab{{if and (eq $s "closed") (eq $as "")}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=closed">Closed</a>
+    <a class="tab{{if and (eq $s "") (eq $as "")}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}">All</a>
   </nav>
   {{end}}
 
@@ -30,7 +31,6 @@
       <option value="open"{{if eq $s "open"}} selected{{end}}>Open</option>
       <option value="in_progress"{{if eq $s "in_progress"}} selected{{end}}>In progress</option>
       <option value="closed"{{if eq $s "closed"}} selected{{end}}>Closed</option>
-      <option value="unassigned"{{if eq $s "unassigned"}} selected{{end}}>Unassigned</option>
       <option value="reopen"{{if eq $s "reopen"}} selected{{end}}>Reopen requests</option>
     </select>
     <select class="input" name="priority" aria-label="Priority">

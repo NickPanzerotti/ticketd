@@ -72,11 +72,13 @@
     el.title=d.toLocaleString();
     if(s<0&&a>=45){}
   });
-  document.querySelectorAll('form.filters select').forEach(function(sel){
-    sel.addEventListener('change',function(){sel.form.requestSubmit();});
-  });
-  document.querySelectorAll('form.autosubmit select').forEach(function(sel){
-    sel.addEventListener('change',function(){sel.form.submit();});
+  // Delegated so the behaviour survives htmx swaps of the filter form:
+  // any filter select change submits immediately (no Enter needed).
+  document.addEventListener('change',function(e){
+    var el=e.target;
+    if(!el||!el.matches)return;
+    if(el.matches('form.filters select')&&el.form){el.form.requestSubmit();}
+    else if(el.matches('form.autosubmit select')&&el.form){el.form.submit();}
   });
 })();
 </script>
