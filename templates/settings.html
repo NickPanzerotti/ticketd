@@ -1,0 +1,50 @@
+{{define "content"}}
+<div class="narrow">
+  <div class="page-head"><h1>Settings</h1></div>
+
+  <div class="card form-card">
+    <h2>Email notifications</h2>
+    <p class="muted small">When someone replies on a ticket, ticketd emails the people involved.
+      Only accounts with an email address receive notifications.</p>
+    <form method="post" action="/admin/settings">
+      <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+
+      <label class="field-check"><input type="checkbox" name="enabled" value="1"{{if .D.S.Enabled}} checked{{end}}> Enable reply notifications</label>
+
+      <label class="field-label" for="s-scope">Notify</label>
+      <select class="input" id="s-scope" name="notify_scope">
+        <option value="participants"{{if ne .D.S.NotifyScope "creator"}} selected{{end}}>Ticket creator and everyone who has replied</option>
+        <option value="creator"{{if eq .D.S.NotifyScope "creator"}} selected{{end}}>Ticket creator only</option>
+      </select>
+
+      <label class="field-label" for="s-host">SMTP server</label>
+      <input class="input" id="s-host" name="smtp_host" value="{{.D.S.SMTPHost}}" placeholder="mail.example.com" autocomplete="off">
+      <label class="field-label" for="s-port">SMTP port</label>
+      <input class="input" id="s-port" name="smtp_port" type="number" min="1" max="65535" value="{{.D.S.SMTPPort}}">
+      <p class="muted small">587 usually upgrades to TLS automatically; 465 connects with TLS directly.</p>
+
+      <label class="field-label" for="s-user">SMTP username <span class="muted">(optional)</span></label>
+      <input class="input" id="s-user" name="smtp_user" value="{{.D.S.SMTPUser}}" autocomplete="off">
+      <label class="field-label" for="s-pass">SMTP password <span class="muted">(leave blank to keep the stored one)</span></label>
+      <input class="input" id="s-pass" name="smtp_pass" type="password" placeholder="{{if .D.S.SMTPPassword}}••••••••{{end}}" autocomplete="new-password">
+      <label class="field-label" for="s-from">From address <span class="muted">(defaults to the username)</span></label>
+      <input class="input" id="s-from" name="smtp_from" value="{{.D.S.SMTPFrom}}" placeholder="ticketd@example.com" autocomplete="off">
+
+      <label class="field-label" for="s-url">Public URL <span class="muted">(optional, adds links to emails)</span></label>
+      <input class="input" id="s-url" name="public_url" value="{{.D.S.PublicURL}}" placeholder="https://it.example.com" autocomplete="off">
+
+      <div class="form-actions"><button class="btn btn-primary" type="submit">Save settings</button></div>
+    </form>
+  </div>
+
+  <div class="card form-card">
+    <h2>Send a test email</h2>
+    <form method="post" action="/admin/settings/test">
+      <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+      <label class="field-label" for="s-test">Send test to</label>
+      <input class="input" id="s-test" name="test_to" type="email" placeholder="you@example.com" required autocomplete="off">
+      <div class="form-actions"><button class="btn" type="submit">Send test email</button></div>
+    </form>
+  </div>
+</div>
+{{end}}

@@ -63,10 +63,26 @@ environment variables.
 - **Admins** (IT team): dashboard with queue statistics; search and filter all tickets;
   take or assign tickets to other admins; change status, priority and category; reply
   publicly or leave internal notes visible only to admins; manage categories and user
-  accounts (create, promote, deactivate). There is no self-signup — admins create accounts.
+  accounts (create, promote, deactivate); configure email notifications under
+  **Settings**. There is no self-signup — admins create accounts.
 - **Users** (staff): see and create their own tickets, attach files, follow the ticket
   thread and reply. Replying on a closed ticket submits a reopen request for an admin to
   decide on.
+- Everyone with an email address on their account (set by an admin, or self-service on
+  the account page) can receive reply notifications.
+
+## Email notifications
+
+Admins configure everything in the web UI under **Settings** — no environment variables
+or restarts: SMTP server/port (STARTTLS or implicit TLS on 465), optional credentials,
+From address, an optional public base URL that adds ticket links to emails, an
+enable/disable switch, and who gets notified (ticket creator only, or everyone involved
+in the ticket). A **Send test email** button verifies the setup instantly.
+
+Sending is asynchronous and best-effort: the app never blocks or fails a reply because
+a mail server is unreachable (failures go to the container log). Internal notes never
+generate email. SMTP credentials are stored in the local database file alongside the
+tickets — keep that volume private, as you already would.
 
 ## Ticket numbers
 

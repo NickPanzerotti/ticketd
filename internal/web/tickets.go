@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"ticketd/internal/notify"
 	"ticketd/internal/store"
 )
 
@@ -249,6 +250,26 @@ func (s *Server) handleTicketDetail(w http.ResponseWriter, r *http.Request) {
 
 // --- reply ---
 
+// notifyReply sends reply notifications in the background so a slow or
+// unreachable SMTP server can never block or fail the reply request.
+func (s *Server) notifyReply(t *store.Ticket, authorID int64, authorName, body string) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("notify panic: %v", r)
+			}
+		}()
+		cfg, err := s.store.GetNotifySettings()
+		if err != nil {
+			log.Printf("notify settings: %v", err)
+			return
+		}
+		if err := notify.Reply(s.store, s.mailer, cfg, s.cfg.TicketPrefix, t, authorID, authorName, body); err != nil {
+			log.Printf("email notification: %v", err)
+		}
+	}()
+}
+
 func (s *Server) handleReply(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFrom(r.Context())
 	t, ok := s.ticketFromPath(w, r)
@@ -290,6 +311,10 @@ func (s *Server) handleReply(w http.ResponseWriter, r *http.Request) {
 	}
 	if msg := s.saveUploads(t.ID, sess.UserID, post.ID, files); msg != "" {
 		s.pushFlash(r, "err", msg)
+	}
+	// Internal notes are admin-only and never send emails.
+	if !internal {
+		s.notifyReply(t, sess.UserID, sess.User.DisplayName, body)
 	}
 	http.Redirect(w, r, s.ticketURL(t), http.StatusSeeOther)
 }

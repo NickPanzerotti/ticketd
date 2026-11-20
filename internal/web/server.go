@@ -17,6 +17,7 @@ import (
 
 	"ticketd/internal/buildinfo"
 	"ticketd/internal/config"
+	"ticketd/internal/notify"
 	"ticketd/internal/store"
 )
 
@@ -30,6 +31,8 @@ type Server struct {
 	flashes  map[string][]FlashMsg
 	flashM   sync.Mutex
 	attempts *rateLimiter
+	// mailer sends reply notifications; tests swap in a fake.
+	mailer notify.Mailer
 }
 
 type FlashMsg struct {
@@ -49,6 +52,7 @@ func New(cfg *config.Config, st *store.Store, tmplFS, staticFS fs.FS) (*Server, 
 		sets:     map[string]*template.Template{},
 		flashes:  map[string][]FlashMsg{},
 		attempts: newRateLimiter(),
+		mailer:   notify.SMTPMailer{},
 	}
 	if err := s.loadTemplates(tmplFS); err != nil {
 		return nil, err
@@ -58,7 +62,7 @@ func New(cfg *config.Config, st *store.Store, tmplFS, staticFS fs.FS) (*Server, 
 
 // --- templates ---
 
-var pageNames = []string{"login", "dashboard", "list", "detail", "new", "users", "categories", "account", "error"}
+var pageNames = []string{"login", "dashboard", "list", "detail", "new", "users", "categories", "settings", "account", "error"}
 
 var funcMap = template.FuncMap{
 	"statusLabel":   statusLabel,
@@ -363,12 +367,17 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("POST /admin/users/{id}/role", s.requireAdmin(s.handleUserRole))
 	m.HandleFunc("POST /admin/users/{id}/active", s.requireAdmin(s.handleUserActive))
 	m.HandleFunc("POST /admin/users/{id}/password", s.requireAdmin(s.handleUserPassword))
+	m.HandleFunc("POST /admin/users/{id}/email", s.requireAdmin(s.handleUserEmail))
 	m.HandleFunc("GET /admin/categories", s.requireAdmin(s.handleCategoriesAdmin))
 	m.HandleFunc("POST /admin/categories/new", s.requireAdmin(s.handleCategoryCreate))
 	m.HandleFunc("POST /admin/categories/{id}", s.requireAdmin(s.handleCategoryUpdate))
+	m.HandleFunc("GET /admin/settings", s.requireAdmin(s.handleSettings))
+	m.HandleFunc("POST /admin/settings", s.requireAdmin(s.handleSettingsSave))
+	m.HandleFunc("POST /admin/settings/test", s.requireAdmin(s.handleSettingsTest))
 
 	m.HandleFunc("GET /account", s.requireLogin(s.handleAccount))
 	m.HandleFunc("POST /account/password", s.requireLogin(s.handleSelfPassword))
+	m.HandleFunc("POST /account/email", s.requireLogin(s.handleSelfEmail))
 
 	var h http.Handler = m
 	h = s.csrfMiddleware(h)

@@ -92,6 +92,7 @@ func (s *Store) migrate() error {
 		if err != nil {
 			return err
 		}
+		version = want // keep the in-memory cursor in step with the DB
 	}
 	return s.seed()
 }

@@ -16,6 +16,12 @@ import (
 )
 
 func newTestServer(t *testing.T) (*httptest.Server, *store.Store) {
+	srv, st, _ := newTestApp(t)
+	return srv, st
+}
+
+// newTestApp additionally returns the *Server so tests can swap s.mailer.
+func newTestApp(t *testing.T) (*httptest.Server, *store.Store, *Server) {
 	t.Helper()
 	cfg := &config.Config{
 		BindHost: "127.0.0.1", BindPort: 0,
@@ -32,7 +38,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *store.Store) {
 	}
 	srv := httptest.NewServer(app.Handler())
 	t.Cleanup(func() { srv.Close(); st.DB.Close() })
-	return srv, st
+	return srv, st, app
 }
 
 func newClient(t *testing.T) *http.Client {

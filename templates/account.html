@@ -13,6 +13,13 @@
       <div class="form-actions"><button class="btn btn-primary" type="submit">Change password</button></div>
     </form>
     <p class="muted small">Changing your password signs you out everywhere.</p>
+    <form method="post" action="/account/email">
+      <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+      <label class="field-label" for="e-address">Email for ticket notifications</label>
+      <input class="input" id="e-address" type="email" name="email" value="{{$u.Email}}" placeholder="you@example.com" autocomplete="email">
+      <div class="form-actions"><button class="btn" type="submit">Save email</button></div>
+    </form>
+    <p class="muted small">Leave blank to stop receiving ticket emails. Administrators can also set this for any account.</p>
   </div>
 </div>
 {{end}}

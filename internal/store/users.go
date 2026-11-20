@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,12 +27,15 @@ type User struct {
 	ID          int64
 	Username    string
 	DisplayName string
+	Email       string // optional; destination for reply notifications
 	Role        string // "admin" | "user"
 	Active      bool
 	CreatedAt   string
 }
 
 func (u *User) IsAdmin() bool { return u.Role == "admin" }
+
+const userCols = `id, username, display_name, role, active, created_at, COALESCE(email,'')`
 
 func (s *Store) CreateUser(username, displayName, password, role string) (*User, error) {
 	if username == "" || password == "" || displayName == "" {
@@ -57,17 +62,17 @@ func (s *Store) CreateUser(username, displayName, password, role string) (*User,
 }
 
 func (s *Store) GetUser(id int64) (*User, error) {
-	row := s.DB.QueryRow(`SELECT id, username, display_name, role, active, created_at FROM users WHERE id = ?`, id)
+	row := s.DB.QueryRow(`SELECT `+userCols+` FROM users WHERE id = ?`, id)
 	return scanUser(row)
 }
 
 func (s *Store) GetUserByName(username string) (*User, error) {
-	row := s.DB.QueryRow(`SELECT id, username, display_name, role, active, created_at FROM users WHERE username = ?`, username)
+	row := s.DB.QueryRow(`SELECT `+userCols+` FROM users WHERE username = ?`, username)
 	return scanUser(row)
 }
 
 func (s *Store) ListUsers() ([]User, error) {
-	rows, err := s.DB.Query(`SELECT id, username, display_name, role, active, created_at FROM users ORDER BY username`)
+	rows, err := s.DB.Query(`SELECT ` + userCols + ` FROM users ORDER BY username`)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +82,7 @@ func (s *Store) ListUsers() ([]User, error) {
 
 // ListActiveAdmins returns users that tickets can be assigned to.
 func (s *Store) ListActiveAdmins() ([]User, error) {
-	rows, err := s.DB.Query(`SELECT id, username, display_name, role, active, created_at FROM users WHERE role = 'admin' AND active = 1 ORDER BY username`)
+	rows, err := s.DB.Query(`SELECT ` + userCols + ` FROM users WHERE role = 'admin' AND active = 1 ORDER BY username`)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +97,7 @@ type scanner interface {
 func scanUser(sc scanner) (*User, error) {
 	var u User
 	var active int
-	err := sc.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Role, &active, &u.CreatedAt)
+	err := sc.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Role, &active, &u.CreatedAt, &u.Email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -134,6 +139,23 @@ func (s *Store) SetRole(userID int64, role string) error {
 		return ErrInvalidInput
 	}
 	_, err := s.DB.Exec(`UPDATE users SET role = ?, updated_at = ? WHERE id = ?`, role, nowRFC(), userID)
+	return err
+}
+
+// emailRe is a deliberately light sanity check, not full RFC validation:
+// something@somewhere.tld.
+var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+
+func ValidEmail(email string) bool {
+	return emailRe.MatchString(email)
+}
+
+// SetEmail sets (or clears, with "") the notification address for an account.
+func (s *Store) SetEmail(userID int64, email string) error {
+	if email != "" && !ValidEmail(email) {
+		return fmt.Errorf("%w: invalid email", ErrInvalidInput)
+	}
+	_, err := s.DB.Exec(`UPDATE users SET email = nullif(?, ''), updated_at = ? WHERE id = ?`, email, nowRFC(), userID)
 	return err
 }
 

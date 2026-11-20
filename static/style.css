@@ -97,6 +97,8 @@ main.container { padding-top: 22px; padding-bottom: 48px; }
 .form-card { max-width: 640px; }
 .narrow { max-width: 640px; margin: 0 auto; }
 .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 12px 0 4px; }
+.field-check { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; font-size: 14px; font-weight: 600; }
+.field-check input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
 .input {
   width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px;
   background: var(--surface); color: var(--text); font: inherit;

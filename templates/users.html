@@ -10,7 +10,8 @@
       <tr>
         <td>
           <div class="user-cell"><span class="avatar">{{initial .DisplayName}}</span>
-            <div><strong>{{.DisplayName}}</strong><div class="t-meta mono">{{.Username}}</div></div>
+            <div><strong>{{.DisplayName}}</strong><div class="t-meta mono">{{.Username}}</div>
+              <div class="t-meta">{{if .Email}}{{.Email}}{{else}}no email{{end}}</div></div>
           </div>
         </td>
         <td>
@@ -33,6 +34,11 @@
             <button class="btn btn-sm" type="submit">{{if .Active}}Disable{{else}}Enable{{end}}</button>
           </form>
           {{end}}
+          <form class="inline-form" method="post" action="/admin/users/{{.ID}}/email">
+            <input type="hidden" name="csrf" value="{{$.P.CSRF}}">
+            <input class="input input-sm" type="email" name="email" value="{{.Email}}" placeholder="Email for notifications">
+            <button class="btn btn-sm" type="submit">Set</button>
+          </form>
           <form class="inline-form" method="post" action="/admin/users/{{.ID}}/password">
             <input type="hidden" name="csrf" value="{{$.P.CSRF}}">
             <input class="input input-sm" type="password" name="password" placeholder="New password" minlength="8" required>
@@ -54,6 +60,8 @@
     <input class="input" id="u-display" name="display_name" required>
     <label class="field-label" for="u-pass">Password</label>
     <input class="input" id="u-pass" type="password" name="password" required minlength="8">
+    <label class="field-label" for="u-email">Email for notifications <span class="muted">(optional)</span></label>
+    <input class="input" id="u-email" type="email" name="email" autocomplete="off">
     <label class="field-label" for="u-role">Role</label>
     <select class="input" id="u-role" name="role">
       <option value="user">User — can raise tickets</option>
