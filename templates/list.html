@@ -12,7 +12,7 @@
   <nav class="tabs">
     <a class="tab{{if eq (.D.Values.Get "status") "open"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=open">Open</a>
     <a class="tab{{if eq (.D.Values.Get "status") "unassigned"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=unassigned">Unassigned</a>
-    <a class="tab{{if eq (.D.Values.Get "status") "reopen"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=reopen">Reopen requests</a>
+    <a class="tab{{if eq (.D.Values.Get "status") "in_progress"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=in_progress">In Progress</a>
     <a class="tab{{if eq (.D.Values.Get "status") "closed"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=closed">Closed</a>
     <a class="tab{{if eq (.D.Values.Get "status") ""}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}">All</a>
   </nav>
@@ -30,6 +30,8 @@
       <option value="open"{{if eq $s "open"}} selected{{end}}>Open</option>
       <option value="in_progress"{{if eq $s "in_progress"}} selected{{end}}>In progress</option>
       <option value="closed"{{if eq $s "closed"}} selected{{end}}>Closed</option>
+      <option value="unassigned"{{if eq $s "unassigned"}} selected{{end}}>Unassigned</option>
+      <option value="reopen"{{if eq $s "reopen"}} selected{{end}}>Reopen requests</option>
     </select>
     <select class="input" name="priority" aria-label="Priority">
       <option value="">Any priority</option>

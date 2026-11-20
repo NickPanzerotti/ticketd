@@ -3,7 +3,7 @@
 <div class="page-head"><h1>Dashboard</h1></div>
 <div class="stat-grid">
   <a class="card stat" href="/tickets?status=open"><div class="stat-num">{{$s.Open}}</div><div class="stat-label">Open</div></a>
-  <a class="card stat" href="/tickets?status=open&sort=priority"><div class="stat-num">{{$s.InProgress}}</div><div class="stat-label">In progress</div></a>
+  <a class="card stat" href="/tickets?status=in_progress"><div class="stat-num">{{$s.InProgress}}</div><div class="stat-label">In progress</div></a>
   <a class="card stat" href="/tickets?status=unassigned"><div class="stat-num">{{$s.Unassigned}}</div><div class="stat-label">Unassigned</div></a>
   <a class="card stat" href="/tickets?status=reopen"><div class="stat-num">{{$s.ReopenReqs}}</div><div class="stat-label">Reopen requests</div></a>
   <a class="card stat" href="/tickets?priority=high&sort=priority"><div class="stat-num">{{$s.HighPriority}}</div><div class="stat-label">High / urgent, not closed</div></a>

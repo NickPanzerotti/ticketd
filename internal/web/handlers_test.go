@@ -225,4 +225,25 @@ func TestEndToEndFlow(t *testing.T) {
 	if _, html := get(t, ac, base+"/tickets/3"); !strings.Contains(html, "secret internal") {
 		t.Fatal("internal note missing for admin")
 	}
+
+	// Queue filter consistency (regression): tabs, status dropdown and
+	// dashboard links must all reflect the same filter state.
+	if _, body := get(t, ac, base+"/tickets?status=in_progress"); !strings.Contains(body, "Printer down") ||
+		strings.Contains(body, "VPN access") || strings.Contains(body, "Monitor flicker") {
+		t.Fatal("in_progress filter should list only the in-progress ticket")
+	}
+	if code, body := get(t, ac, base+"/tickets"); code != 200 ||
+		!strings.Contains(body, `>In Progress</a>`) || strings.Contains(body, `>Reopen requests</a>`) {
+		t.Fatalf("tab bar should offer In Progress, not Reopen requests: %d", code)
+	}
+	if _, body := get(t, ac, base+"/tickets?status=in_progress"); !strings.Contains(body, `value="in_progress" selected`) {
+		t.Fatal("status dropdown must be pre-selected as In progress for status=in_progress")
+	}
+	if _, body := get(t, ac, base+"/tickets?status=unassigned"); !strings.Contains(body, `value="unassigned" selected`) {
+		t.Fatal("status dropdown must be pre-selected as Unassigned for status=unassigned")
+	}
+	if _, body := get(t, ac, base+"/tickets?status=unassigned"); !strings.Contains(body, "VPN access") ||
+		strings.Contains(body, "Printer down") {
+		t.Fatal("unassigned filter mismatch")
+	}
 }
