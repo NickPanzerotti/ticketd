@@ -48,7 +48,7 @@
   {{end}}
   {{template "content" .}}
 </main>
-<footer class="foot container">ticketd</footer>
+<footer class="foot container">ticketd{{if .P.Version}} - {{.P.Version}}{{end}}</footer>
 <script>
 (function(){
   var btn=document.getElementById('themeToggle');

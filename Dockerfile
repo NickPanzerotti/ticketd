@@ -10,7 +10,9 @@ COPY go.mod go.sum ./
 COPY vendor/ vendor/
 COPY . .
 
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -mod=vendor -o /out/ticketd .
+# VERSION is stamped by CI (git describe --tags); plain builds show "dev".
+ARG VERSION=dev
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X ticketd/internal/buildinfo.Version=$VERSION" -mod=vendor -o /out/ticketd .
 
 # ---- Runtime stage ---------------------------------------------------------
 # The binary embeds templates/ and static/ via go:embed, so the final image

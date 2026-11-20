@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"ticketd/internal/buildinfo"
 	"ticketd/internal/config"
 	"ticketd/internal/store"
 )
@@ -172,6 +173,8 @@ type Page struct {
 	Prefix  string
 	Flashes []FlashMsg
 	IsAdmin bool
+	// Version renders as " v…" in the footer; empty for dev builds.
+	Version string
 }
 
 type viewData struct {
@@ -181,6 +184,9 @@ type viewData struct {
 
 func (s *Server) pageFor(r *http.Request, active string) Page {
 	p := Page{Prefix: s.cfg.TicketPrefix, Active: active}
+	if buildinfo.Version != "dev" {
+		p.Version = buildinfo.Version
+	}
 	if sess := sessionFrom(r.Context()); sess != nil {
 		p.User = sess.User
 		p.CSRF = sess.CSRF
