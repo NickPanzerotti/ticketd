@@ -126,7 +126,14 @@ func (s *Server) loadTemplates(tmplFS fs.FS) error {
 		funcs[k] = v
 	}
 	prefix := s.cfg.TicketPrefix
-	funcs["ref"] = func(n int) string { return fmt.Sprintf("%s#%d", prefix, n) }
+	// With no prefix: "#1042". With a prefix: "IT-1042" (the prefix replaces
+	// the # sign rather than doubling up).
+	funcs["ref"] = func(n int) string {
+		if prefix != "" {
+			return fmt.Sprintf("%s%d", prefix, n)
+		}
+		return fmt.Sprintf("#%d", n)
+	}
 
 	layout, err := fs.ReadFile(tmplFS, "layout.html")
 	if err != nil {

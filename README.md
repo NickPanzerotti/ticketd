@@ -77,7 +77,7 @@ does not free its number. They are shown as `#1042`, optionally prefixed via
 
 ## Updating
 
-`latest` tracks the `main` branch; version tags (`:v0.1.0`) are immutable. To update a
+`latest` tracks the `main` branch; version tags (`:0.1.0`) are immutable. To update a
 running installation — your tickets, accounts and uploads live in the volume and are not
 touched:
 
