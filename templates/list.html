@@ -1,0 +1,85 @@
+{{define "content"}}{{template "list-part" .}}{{end}}
+
+{{define "list-part"}}
+{{$self := ""}}{{$listURL := "/my-tickets"}}{{if .D.Admin}}{{$listURL = "/tickets"}}{{end}}
+<div id="list-part">
+  <div class="page-head">
+    <h1>{{if .D.Admin}}Ticket queue{{else}}My tickets{{end}}</h1>
+    <div class="count">{{.D.Total}} ticket{{if ne .D.Total 1}}s{{end}}</div>
+  </div>
+
+  {{if .D.Admin}}
+  <nav class="tabs">
+    <a class="tab{{if eq (.D.Values.Get "status") "open"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=open">Open</a>
+    <a class="tab{{if eq (.D.Values.Get "status") "unassigned"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=unassigned">Unassigned</a>
+    <a class="tab{{if eq (.D.Values.Get "status") "reopen"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=reopen">Reopen requests</a>
+    <a class="tab{{if eq (.D.Values.Get "status") "closed"}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}status=closed">Closed</a>
+    <a class="tab{{if eq (.D.Values.Get "status") ""}} on{{end}}" href="{{$listURL}}{{.D.TabBase}}">All</a>
+  </nav>
+  {{end}}
+
+  <form id="filters" class="filters" method="get" action="{{$listURL}}"
+        hx-get="{{$listURL}}" hx-target="#list-part" hx-swap="outerHTML" hx-include="#filters">
+    <input class="input grow" type="search" name="q" placeholder="Search tickets…"
+           value="{{.D.Values.Get "q"}}"
+           hx-get="{{$listURL}}" hx-target="#list-part" hx-swap="outerHTML" hx-include="#filters"
+           hx-trigger="keyup changed delay:400ms, submit">
+    <select class="input" name="status" aria-label="Status">
+      <option value="">Any status</option>
+      {{$s := .D.Values.Get "status"}}
+      <option value="open"{{if eq $s "open"}} selected{{end}}>Open</option>
+      <option value="in_progress"{{if eq $s "in_progress"}} selected{{end}}>In progress</option>
+      <option value="closed"{{if eq $s "closed"}} selected{{end}}>Closed</option>
+    </select>
+    <select class="input" name="priority" aria-label="Priority">
+      <option value="">Any priority</option>
+      {{$p := .D.Values.Get "priority"}}
+      <option value="urgent"{{if eq $p "urgent"}} selected{{end}}>Urgent</option>
+      <option value="high"{{if eq $p "high"}} selected{{end}}>High</option>
+      <option value="normal"{{if eq $p "normal"}} selected{{end}}>Normal</option>
+      <option value="low"{{if eq $p "low"}} selected{{end}}>Low</option>
+    </select>
+    <select class="input" name="category" aria-label="Category">
+      <option value="">Any category</option>
+      {{$c := .D.Values.Get "category"}}
+      {{range .D.Cats}}<option value="{{.ID}}"{{if eq $c (printf "%d" .ID)}} selected{{end}}>{{.Name}}</option>{{end}}
+    </select>
+    {{if .D.Admin}}
+    <select class="input" name="assignee" aria-label="Assignee">
+      <option value="">Anyone</option>
+      <option value="none"{{if eq (.D.Values.Get "assignee") "none"}} selected{{end}}>Unassigned</option>
+      {{$a := .D.Values.Get "assignee"}}
+      {{range .D.Admins}}<option value="{{.ID}}"{{if eq $a (printf "%d" .ID)}} selected{{end}}>{{.DisplayName}}</option>{{end}}
+    </select>
+    <select class="input" name="sort" aria-label="Sort">
+      <option value="updated"{{if eq (.D.Values.Get "sort") "updated"}} selected{{end}}>Recently updated</option>
+      <option value="created"{{if eq (.D.Values.Get "sort") "created"}} selected{{end}}>Newest</option>
+      <option value="priority"{{if eq (.D.Values.Get "sort") "priority"}} selected{{end}}>Priority</option>
+    </select>
+    {{end}}
+    <noscript><button class="btn" type="submit">Apply</button></noscript>
+  </form>
+
+  <div class="card table-card">
+    <table class="tickets">
+      <thead>
+        <tr><th>Ticket</th><th>Title</th><th>Status</th><th>Priority</th><th>Category</th><th>Assignee</th></tr>
+      </thead>
+      <tbody>
+        {{range .D.Tickets}}{{template "ticket-row" .}}
+        {{else}}
+        <tr><td colspan="6" class="empty">No tickets match.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  {{if gt .D.Pages 1}}
+  <div class="pager">
+    {{if gt .D.Page 1}}<a class="btn btn-sm" href="{{$listURL}}{{.D.QueryBase}}page={{sub .D.Page 1}}">← Previous</a>{{end}}
+    <span class="muted">Page {{.D.Page}} of {{.D.Pages}}</span>
+    {{if lt .D.Page .D.Pages}}<a class="btn btn-sm" href="{{$listURL}}{{.D.QueryBase}}page={{add .D.Page 1}}">Next →</a>{{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}

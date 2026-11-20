@@ -1,0 +1,38 @@
+{{define "status-pill"}}<span class="pill pill-{{.Status}}">{{statusLabel .Status}}</span>{{end}}
+
+{{define "prio-pill"}}<span class="prio prio-{{.Priority}}">{{priorityLabel .Priority}}</span>{{end}}
+
+{{define "cat-chip"}}{{if .CategoryName.Valid}}<span class="chip" style="--chip:{{.CategoryColor.String}}">{{.CategoryName.String}}</span>{{else}}<span class="chip chip-none">Uncategorized</span>{{end}}{{end}}
+
+{{define "ticket-row"}}
+<tr>
+  <td class="mono"><a href="/tickets/{{.Number}}">{{ref .Number}}</a></td>
+  <td class="t-title">
+    <a href="/tickets/{{.Number}}">{{.Title}}</a>
+    <div class="t-meta">
+      updated {{fmtTime .LastActivity}}
+      {{if .ReplyCount}} · {{.ReplyCount}} repl{{if eq .ReplyCount 1}}y{{else}}ies{{end}}{{end}}
+      {{if .ReopenRequested}} · <span class="warn">reopen requested</span>{{end}}
+    </div>
+  </td>
+  <td>{{template "status-pill" .}}</td>
+  <td>{{template "prio-pill" .}}</td>
+  <td>{{template "cat-chip" .}}</td>
+  <td>{{if .AssigneeName.Valid}}{{.AssigneeName.String}}{{else}}<span class="muted">—</span>{{end}}</td>
+</tr>
+{{end}}
+
+{{define "att-list"}}{{if .}}<div class="att-list">
+  {{range .}}
+    {{if hasPrefix .ContentType "image/"}}
+      <a class="att att-img" href="/attachments/{{.ID}}" target="_blank" rel="noopener" title="{{.Filename}}">
+        <img loading="lazy" src="/attachments/{{.ID}}" alt="{{.Filename}}">
+      </a>
+    {{else}}
+      <a class="att" href="/attachments/{{.ID}}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm0 2.5L19.5 10H14V4.5Z"/></svg>
+        <span>{{.Filename}}</span><span class="att-size">{{sizeFmt .SizeBytes}}</span>
+      </a>
+    {{end}}
+  {{end}}
+</div>{{end}}{{end}}

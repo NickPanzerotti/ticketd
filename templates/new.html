@@ -1,0 +1,40 @@
+{{define "content"}}
+<div class="narrow">
+  <div class="page-head"><h1>New ticket</h1></div>
+  {{with .D.Error}}<div class="flash flash-err">{{.}}</div>{{end}}
+  <form class="card form-card" method="post" enctype="multipart/form-data" action="/tickets">
+    <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+    <label class="field-label" for="f-title">Title</label>
+    <input class="input" id="f-title" name="title" maxlength="200" required autofocus
+           placeholder="Short summary, e.g. “Printer 2F offline”" value="{{.D.Values.title}}">
+    <label class="field-label" for="f-desc">What's happening?</label>
+    <textarea class="input" id="f-desc" name="description" rows="8"
+              placeholder="Describe the problem: what, where, when it started, any error messages…">{{.D.Values.description}}</textarea>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="f-cat">Category</label>
+        <select class="input" id="f-cat" name="category">
+          <option value="0">(none)</option>
+          {{range .D.Cats}}<option value="{{.ID}}"{{if eq ($.D.Values.category | printf "%s") (printf "%d" .ID)}} selected{{end}}>{{.Name}}</option>{{end}}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="f-prio">Priority</label>
+        <select class="input" id="f-prio" name="priority">
+          <option value="normal"{{if eq .D.Values.priority "normal"}} selected{{end}}>Normal</option>
+          <option value="low"{{if eq .D.Values.priority "low"}} selected{{end}}>Low</option>
+          <option value="high"{{if eq .D.Values.priority "high"}} selected{{end}}>High</option>
+          <option value="urgent"{{if eq .D.Values.priority "urgent"}} selected{{end}}>Urgent</option>
+        </select>
+      </div>
+    </div>
+    <label class="field-label" for="f-files">Attachments</label>
+    <input id="f-files" type="file" name="files" multiple>
+    <div class="muted small">Optional. Any file type, up to {{.D.MaxMB}} MB each. Screenshots are very helpful.</div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Create ticket</button>
+      <a class="btn" href="/">Cancel</a>
+    </div>
+  </form>
+</div>
+{{end}}

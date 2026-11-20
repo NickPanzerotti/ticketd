@@ -1,0 +1,35 @@
+{{define "content"}}
+<div class="page-head"><h1>Categories</h1></div>
+<div class="two-col">
+  <div class="card table-card">
+    <table class="tickets">
+      <thead><tr><th>Category</th><th>Status</th></tr></thead>
+      <tbody>
+      {{range .D.Cats}}
+      <tr>
+        <td>
+          <form class="row-edit" method="post" action="/admin/categories/{{.ID}}">
+            <input type="hidden" name="csrf" value="{{$.P.CSRF}}">
+            <input type="color" name="color" value="{{.Color}}" title="Label colour">
+            <input class="input input-sm" name="name" value="{{.Name}}" required maxlength="60">
+            <label class="check"><input type="checkbox" name="active" value="1"{{if .Active}} checked{{end}}> Active</label>
+            <button class="btn btn-sm" type="submit">Save</button>
+          </form>
+        </td>
+        <td>{{if .Active}}<span class="pill pill-ok">Active</span>{{else}}<span class="pill pill-off">Retired</span>{{end}}</td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+  <form class="card form-card" method="post" action="/admin/categories/new">
+    <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+    <h2>New category</h2>
+    <label class="field-label" for="c-name">Name</label>
+    <input class="input" id="c-name" name="name" required maxlength="60">
+    <label class="field-label" for="c-color">Colour</label>
+    <input id="c-color" type="color" name="color" value="#2563eb">
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Add category</button></div>
+  </form>
+</div>
+{{end}}

@@ -1,0 +1,65 @@
+{{define "content"}}
+<div class="page-head"><h1>Users</h1></div>
+
+<div class="two-col">
+  <div class="card table-card">
+    <table class="tickets users-table">
+      <thead><tr><th>User</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {{range .D.Users}}
+      <tr>
+        <td>
+          <div class="user-cell"><span class="avatar">{{initial .DisplayName}}</span>
+            <div><strong>{{.DisplayName}}</strong><div class="t-meta mono">{{.Username}}</div></div>
+          </div>
+        </td>
+        <td>
+          {{if ne .ID $.P.User.ID}}
+          <form class="autosubmit inline-form" method="post" action="/admin/users/{{.ID}}/role">
+            <input type="hidden" name="csrf" value="{{$.P.CSRF}}">
+            <select class="input input-sm" name="role">
+              <option value="user"{{if eq .Role "user"}} selected{{end}}>User</option>
+              <option value="admin"{{if eq .Role "admin"}} selected{{end}}>Admin</option>
+            </select>
+          </form>
+          {{else}}<span class="chip">{{.Role}}</span>{{end}}
+        </td>
+        <td>{{if .Active}}<span class="pill pill-ok">Active</span>{{else}}<span class="pill pill-off">Disabled</span>{{end}}</td>
+        <td class="row-actions">
+          {{if ne .ID $.P.User.ID}}
+          <form class="inline-form" method="post" action="/admin/users/{{.ID}}/active">
+            <input type="hidden" name="csrf" value="{{$.P.CSRF}}">
+            <input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}">
+            <button class="btn btn-sm" type="submit">{{if .Active}}Disable{{else}}Enable{{end}}</button>
+          </form>
+          {{end}}
+          <form class="inline-form" method="post" action="/admin/users/{{.ID}}/password">
+            <input type="hidden" name="csrf" value="{{$.P.CSRF}}">
+            <input class="input input-sm" type="password" name="password" placeholder="New password" minlength="8" required>
+            <button class="btn btn-sm" type="submit">Set</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <form class="card form-card" method="post" action="/admin/users/new">
+    <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+    <h2>Create account</h2>
+    <label class="field-label" for="u-name">Username</label>
+    <input class="input" id="u-name" name="username" required autocomplete="off" pattern="[a-zA-Z0-9._-]{2,40}">
+    <label class="field-label" for="u-display">Display name</label>
+    <input class="input" id="u-display" name="display_name" required>
+    <label class="field-label" for="u-pass">Password</label>
+    <input class="input" id="u-pass" type="password" name="password" required minlength="8">
+    <label class="field-label" for="u-role">Role</label>
+    <select class="input" id="u-role" name="role">
+      <option value="user">User — can raise tickets</option>
+      <option value="admin">Admin — IT staff</option>
+    </select>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Create account</button></div>
+  </form>
+</div>
+{{end}}

@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="login-wrap">
+  <div class="card login-card">
+    <div class="login-brand">
+      <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/></svg>
+      <h1>ticketd</h1>
+      <p class="muted">IT service desk</p>
+    </div>
+    {{with .D.Error}}<div class="flash flash-err">{{.}}</div>{{end}}
+    <form method="post" action="/login">
+      <label class="field-label" for="l-user">Username</label>
+      <input class="input" id="l-user" name="username" required autofocus autocomplete="username">
+      <label class="field-label" for="l-pass">Password</label>
+      <input class="input" id="l-pass" type="password" name="password" required autocomplete="current-password">
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+{{end}}

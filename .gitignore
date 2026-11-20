@@ -1,0 +1,9 @@
+# runtime data (SQLite DB + uploads) when running the binary directly
+/data/
+
+# local build artifacts
+/ticketd
+*.log
+
+# local overrides
+.env

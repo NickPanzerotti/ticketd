@@ -1,0 +1,149 @@
+{{define "content"}}
+{{$t := .D.T}}
+<div class="detail-grid">
+  <div class="ticket-main">
+    <div class="card ticket-head">
+      <div class="ticket-head-row">
+        <h1><span class="mono muted">{{ref $t.Number}}</span> {{.D.T.Title}}</h1>
+        <div class="pills">{{template "status-pill" $t}} {{template "prio-pill" $t}}</div>
+      </div>
+      <div class="t-meta">
+        reported by <strong>{{$t.CreatorName}}</strong> · {{fmtTime $t.CreatedAt}}
+        {{if $t.AssignedTo.Valid}} · assigned to <strong>{{$t.AssigneeName.String}}</strong>{{end}}
+      </div>
+      {{if $t.ReopenRequested}}
+      <div class="banner warn-bg">
+        <span>A user has asked for this ticket to be reopened.</span>
+        {{if .P.IsAdmin}}
+        <span class="banner-actions">
+          <form method="post" action="/tickets/{{$t.Number}}/reopen" class="inline-form">
+            <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+            <button class="btn btn-primary btn-sm" type="submit">Reopen</button>
+          </form>
+          <form method="post" action="/tickets/{{$t.Number}}/dismiss-reopen" class="inline-form">
+            <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+            <button class="btn btn-sm" type="submit">Dismiss request</button>
+          </form>
+        </span>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+
+    <div class="card msg msg-first">
+      <div class="msg-head">
+        <span class="avatar">{{initial $t.CreatorName}}</span>
+        <strong>{{$t.CreatorName}}</strong>
+        <span class="msg-tag">opened this ticket</span>
+        <span class="msg-time">{{fmtTime $t.CreatedAt}}</span>
+      </div>
+      <div class="msg-body">{{$t.Description}}</div>
+      {{template "att-list" (index .D.Att 0)}}
+    </div>
+
+    {{$closedNotice := and (eq $t.Status "closed") (not .P.IsAdmin)}}
+    {{range .D.Items}}
+      {{if eq .Kind "event"}}
+      <div class="ev"><span class="ev-dot"></span><span>{{.Event.Detail}}</span><span class="ev-by">— {{.Event.ActorName}}</span><span class="ev-time">{{fmtTime .Event.CreatedAt}}</span></div>
+      {{else}}
+      <div class="card msg{{if .Post.Internal}} msg-internal{{end}}">
+        <div class="msg-head">
+          <span class="avatar">{{initial .Post.AuthorName}}</span>
+          <strong>{{.Post.AuthorName}}</strong>
+          {{if eq .Post.AuthorRole "admin"}}<span class="role-badge">IT admin</span>{{end}}
+          {{if .Post.Internal}}<span class="internal-tag">Internal note — only visible to IT admins</span>{{end}}
+          <span class="msg-time">{{fmtTime .Post.CreatedAt}}</span>
+        </div>
+        <div class="msg-body">{{.Post.Body}}</div>
+        {{template "att-list" (index $.D.Att .Post.ID)}}
+      </div>
+      {{end}}
+    {{end}}
+
+    <form class="card reply-form" method="post" enctype="multipart/form-data" action="/tickets/{{$t.Number}}/reply">
+      <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+      <textarea class="input" name="body" rows="4" placeholder="{{if $closedNotice}}Reply (this submits a reopen request)…{{else}}Write a reply…{{end}}" required></textarea>
+      <div class="reply-actions">
+        <label class="file-label">
+          <input type="file" name="files" multiple>
+          <span class="muted">Attach files (max {{.D.MaxMB}} MB each)</span>
+        </label>
+        {{if .P.IsAdmin}}<label class="check"><input type="checkbox" name="internal" value="1"> Internal note</label>{{end}}
+        <button class="btn btn-primary" type="submit">Send reply</button>
+      </div>
+    </form>
+  </div>
+
+  <aside class="ticket-side">
+    {{if .P.IsAdmin}}
+    <div class="card side-card">
+      <h2>Manage</h2>
+      <form class="autosubmit" method="post" action="/tickets/{{$t.Number}}/status">
+        <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+        <label class="field-label" for="f-status">Status</label>
+        <select id="f-status" class="input" name="status">
+          <option value="open"{{if eq $t.Status "open"}} selected{{end}}>Open</option>
+          <option value="in_progress"{{if eq $t.Status "in_progress"}} selected{{end}}>In progress</option>
+          <option value="closed"{{if eq $t.Status "closed"}} selected{{end}}>Closed</option>
+        </select>
+      </form>
+      <form class="autosubmit" method="post" action="/tickets/{{$t.Number}}/priority">
+        <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+        <label class="field-label" for="f-prio">Priority</label>
+        <select id="f-prio" class="input" name="priority">
+          <option value="low"{{if eq $t.Priority "low"}} selected{{end}}>Low</option>
+          <option value="normal"{{if eq $t.Priority "normal"}} selected{{end}}>Normal</option>
+          <option value="high"{{if eq $t.Priority "high"}} selected{{end}}>High</option>
+          <option value="urgent"{{if eq $t.Priority "urgent"}} selected{{end}}>Urgent</option>
+        </select>
+      </form>
+      <form class="autosubmit" method="post" action="/tickets/{{$t.Number}}/category">
+        <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+        <label class="field-label" for="f-cat">Category</label>
+        <select id="f-cat" class="input" name="category">
+          {{$cur := 0}}{{if $t.CategoryID.Valid}}{{$cur = $t.CategoryID.Int64}}{{end}}
+          <option value="0"{{if eq $cur 0}} selected{{end}}>(none)</option>
+          {{range .D.Cats}}<option value="{{.ID}}"{{if eq $cur .ID}} selected{{end}}>{{.Name}}</option>{{end}}
+        </select>
+      </form>
+      <form class="autosubmit" method="post" action="/tickets/{{$t.Number}}/assign">
+        <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+        <label class="field-label" for="f-assign">Assignee</label>
+        <select id="f-assign" class="input" name="assignee">
+          {{$as := 0}}{{if $t.AssignedTo.Valid}}{{$as = $t.AssignedTo.Int64}}{{end}}
+          <option value="0"{{if eq $as 0}} selected{{end}}>Unassigned</option>
+          {{range .D.Admins}}<option value="{{.ID}}"{{if eq $as .ID}} selected{{end}}>{{.DisplayName}}{{if eq .ID $.P.User.ID}} (me){{end}}</option>{{end}}
+        </select>
+      </form>
+      <div class="quick-actions">
+        {{if ne $t.Status "closed"}}
+        <form method="post" action="/tickets/{{$t.Number}}/status" class="inline-form">
+          <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+          <input type="hidden" name="status" value="closed">
+          <button class="btn btn-sm" type="submit">Close ticket</button>
+        </form>
+        {{else}}
+        <form method="post" action="/tickets/{{$t.Number}}/reopen" class="inline-form">
+          <input type="hidden" name="csrf" value="{{.P.CSRF}}">
+          <button class="btn btn-sm" type="submit">Reopen ticket</button>
+        </form>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+
+    <div class="card side-card">
+      <h2>Details</h2>
+      <dl class="meta-list">
+        <dt>Status</dt><dd>{{template "status-pill" $t}}</dd>
+        <dt>Priority</dt><dd>{{template "prio-pill" $t}}</dd>
+        <dt>Category</dt><dd>{{template "cat-chip" $t}}</dd>
+        <dt>Requested by</dt><dd>{{$t.CreatorName}}</dd>
+        <dt>Assigned to</dt><dd>{{if $t.AssignedTo.Valid}}{{$t.AssigneeName.String}}{{else}}<span class="muted">Unassigned</span>{{end}}</dd>
+        <dt>Created</dt><dd>{{fmtTime $t.CreatedAt}}</dd>
+        {{if $t.ClosedAt.Valid}}<dt>Closed</dt><dd>{{fmtTime $t.ClosedAt.String}}</dd>{{end}}
+      </dl>
+    </div>
+  </aside>
+</div>
+{{end}}

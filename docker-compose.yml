@@ -1,0 +1,17 @@
+services:
+  ticketd:
+    image: ghcr.io/nickpanzerotti/ticketd:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      BIND_HOST: "0.0.0.0"
+      # Replace these before first start; they bootstrap the first admin
+      # account on an empty database.
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "change-me"
+    volumes:
+      - ticketd-data:/data
+
+volumes:
+  ticketd-data:

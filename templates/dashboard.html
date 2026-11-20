@@ -1,0 +1,38 @@
+{{define "content"}}
+{{$s := .D.Stats}}
+<div class="page-head"><h1>Dashboard</h1></div>
+<div class="stat-grid">
+  <a class="card stat" href="/tickets?status=open"><div class="stat-num">{{$s.Open}}</div><div class="stat-label">Open</div></a>
+  <a class="card stat" href="/tickets?status=open&sort=priority"><div class="stat-num">{{$s.InProgress}}</div><div class="stat-label">In progress</div></a>
+  <a class="card stat" href="/tickets?status=unassigned"><div class="stat-num">{{$s.Unassigned}}</div><div class="stat-label">Unassigned</div></a>
+  <a class="card stat" href="/tickets?status=reopen"><div class="stat-num">{{$s.ReopenReqs}}</div><div class="stat-label">Reopen requests</div></a>
+  <a class="card stat" href="/tickets?priority=high&sort=priority"><div class="stat-num">{{$s.HighPriority}}</div><div class="stat-label">High / urgent, not closed</div></a>
+  <a class="card stat" href="/tickets?status=closed"><div class="stat-num">{{$s.ClosedToday}}</div><div class="stat-label">Closed today</div></a>
+</div>
+
+<div class="two-col">
+  <div class="card side-card">
+    <h2>Recent activity</h2>
+    <div class="activity">
+      {{range $s.Recent}}
+      <div class="ev">
+        <span class="ev-dot"></span>
+        {{with $n := index $s.RecentTicketN .TicketID}}
+          {{if $n}}<a href="/tickets/{{$n}}">{{ref $n}}</a>{{else}}<span class="muted">(deleted)</span>{{end}}
+        {{end}}
+        <span>{{.Detail}}</span>
+        <span class="ev-by">— {{.ActorName}}</span>
+        <span class="ev-time">{{fmtTime .CreatedAt}}</span>
+      </div>
+      {{else}}<p class="muted">No activity yet.</p>{{end}}
+    </div>
+  </div>
+  <div class="card side-card">
+    <h2>Quick actions</h2>
+    <p><a class="btn btn-primary btn-sm" href="/tickets/new">New ticket</a></p>
+    <p><a class="btn btn-sm" href="/tickets?status=unassigned">Unassigned queue</a></p>
+    <p><a class="btn btn-sm" href="/tickets?priority=urgent">Urgent tickets</a></p>
+    <p><a class="btn btn-sm" href="/admin/users">Manage users</a></p>
+  </div>
+</div>
+{{end}}
