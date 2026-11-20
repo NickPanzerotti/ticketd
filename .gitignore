@@ -7,3 +7,9 @@
 
 # local overrides
 .env
+
+# local-only agent state and tooling (not published)
+/HANDOFF.md
+/dev/
+/AGENTS.md
+/plan.md
