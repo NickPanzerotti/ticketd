@@ -201,4 +201,59 @@ func TestEmailNotificationsEndToEnd(t *testing.T) {
 	if !strings.Contains(body, "BEGIN CERTIFICATE") || !strings.Contains(body, `name="smtp_tls_insecure" value="1" checked`) {
 		t.Fatal("certificate options must round-trip through the settings page")
 	}
+
+	// admin-new-ticket emails: enabled → creating a ticket notifies active admins
+	csrf = csrfOf(t, ac, base+"/admin/settings")
+	if resp := post(t, ac, base+"/admin/settings", map[string]string{
+		"csrf": csrf, "enabled": "1", "smtp_host": "127.0.0.1", "smtp_port": "2525",
+		"smtp_from": "ticketd@example.com", "notify_admin_new": "1",
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("save admin-new on: %d", resp.StatusCode)
+	}
+	_, body = get(t, ac, base+"/admin/settings")
+	if !strings.Contains(body, `name="notify_admin_new" value="1" checked`) {
+		t.Fatal("admin-new checkbox should render as checked after save")
+	}
+
+	csrf = csrfOf(t, uc, base+"/tickets/new")
+	if resp, err := uc.PostForm(base+"/tickets", map[string][]string{
+		"csrf": {csrf}, "title": {"Monitor flicker"}, "description": {"worse on Mondays"},
+	}); err != nil {
+		t.Fatal(err)
+	} else if resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("create ticket 2: %d", resp.StatusCode)
+	}
+	msg, ok = waitForMail(t, mailer, 3*time.Second)
+	if !ok {
+		t.Fatal("expected admin notification for the new ticket")
+	}
+	if len(msg.To) != 1 || msg.To[0] != "admin@example.com" {
+		t.Fatalf("admin-new recipients: %v (creator and non-admins must not be included)", msg.To)
+	}
+	if !strings.Contains(msg.Subject, "Monitor flicker") {
+		t.Fatalf("admin-new subject: %q", msg.Subject)
+	}
+	if !strings.Contains(msg.Body, "Alice created ticket") || !strings.Contains(msg.Body, "worse on Mondays") {
+		t.Fatalf("admin-new body: %q", msg.Body)
+	}
+
+	// turning the option off stops admin notifications (replies still work)
+	csrf = csrfOf(t, ac, base+"/admin/settings")
+	if resp := post(t, ac, base+"/admin/settings", map[string]string{
+		"csrf": csrf, "enabled": "1", "smtp_host": "127.0.0.1", "smtp_port": "2525",
+		"smtp_from": "ticketd@example.com",
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("save admin-new off: %d", resp.StatusCode)
+	}
+	csrf = csrfOf(t, uc, base+"/tickets/new")
+	if resp, err := uc.PostForm(base+"/tickets", map[string][]string{
+		"csrf": {csrf}, "title": {"Quiet queue"}, "description": {"no email please"},
+	}); err != nil {
+		t.Fatal(err)
+	} else if resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("create ticket 3: %d", resp.StatusCode)
+	}
+	if _, ok := waitForMail(t, mailer, 400*time.Millisecond); ok {
+		t.Fatal("admin-new was disabled; no email expected")
+	}
 }

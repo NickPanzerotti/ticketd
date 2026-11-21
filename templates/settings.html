@@ -17,6 +17,9 @@
         <option value="creator"{{if eq .D.S.NotifyScope "creator"}} selected{{end}}>Ticket creator only</option>
       </select>
 
+      <label class="field-check"><input type="checkbox" name="notify_admin_new" value="1"{{if .D.S.AdminNewTicket}} checked{{end}}> Email all admins when a new ticket is created</label>
+      <p class="muted small">Sent to active admin accounts that have an email address; the person who created the ticket is not emailed.</p>
+
       <label class="field-label" for="s-host">SMTP server</label>
       <input class="input" id="s-host" name="smtp_host" value="{{.D.S.SMTPHost}}" placeholder="mail.example.com" autocomplete="off">
       <label class="field-label" for="s-port">SMTP port</label>

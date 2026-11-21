@@ -180,6 +180,8 @@ func (s *Server) handleCreateTicket(w http.ResponseWriter, r *http.Request) {
 			s.pushFlash(r, "err", fmt.Sprintf("Could not attach %s: %v", f.Filename, aerr))
 		}
 	}
+	// Admin notification is async and best-effort, like reply notifications.
+	s.notifyNewTicket(t, sess.UserID, sess.User.DisplayName)
 	http.Redirect(w, r, s.ticketURL(t), http.StatusSeeOther)
 }
 
@@ -250,9 +252,10 @@ func (s *Server) handleTicketDetail(w http.ResponseWriter, r *http.Request) {
 
 // --- reply ---
 
-// notifyReply sends reply notifications in the background so a slow or
-// unreachable SMTP server can never block or fail the reply request.
-func (s *Server) notifyReply(t *store.Ticket, authorID int64, authorName, body string) {
+// notifyAsync runs an email task in the background so a slow or
+// unreachable SMTP server can never block or fail the request that
+// triggered it. Failures are logged only.
+func (s *Server) notifyAsync(task func(cfg store.NotifySettings) error) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -264,10 +267,25 @@ func (s *Server) notifyReply(t *store.Ticket, authorID int64, authorName, body s
 			log.Printf("notify settings: %v", err)
 			return
 		}
-		if err := notify.Reply(s.store, s.mailer, cfg, s.cfg.TicketPrefix, t, authorID, authorName, body); err != nil {
+		if err := task(cfg); err != nil {
 			log.Printf("email notification: %v", err)
 		}
 	}()
+}
+
+// notifyReply sends reply notifications.
+func (s *Server) notifyReply(t *store.Ticket, authorID int64, authorName, body string) {
+	s.notifyAsync(func(cfg store.NotifySettings) error {
+		return notify.Reply(s.store, s.mailer, cfg, s.cfg.TicketPrefix, t, authorID, authorName, body)
+	})
+}
+
+// notifyNewTicket emails the admins when a ticket is created (option in
+// Settings; the creator is never among the recipients).
+func (s *Server) notifyNewTicket(t *store.Ticket, creatorID int64, creatorName string) {
+	s.notifyAsync(func(cfg store.NotifySettings) error {
+		return notify.NewTicket(s.store, s.mailer, cfg, s.cfg.TicketPrefix, t, creatorID, creatorName)
+	})
 }
 
 func (s *Server) handleReply(w http.ResponseWriter, r *http.Request) {

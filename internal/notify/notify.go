@@ -151,6 +151,33 @@ func render(from, user string, msg Message) string {
 	return b.String()
 }
 
+// emailBody builds the shared shape of notification bodies: an intro line,
+// the quoted source text, an optional ticket link, and a reason footer.
+func emailBody(intro, snippet string, cfg store.NotifySettings, number int, reason string) string {
+	var text strings.Builder
+	fmt.Fprintf(&text, "%s:\r\n\r\n", intro)
+	if snippet != "" {
+		for _, line := range strings.Split(snippet, "\n") {
+			text.WriteString("> " + line + "\r\n")
+		}
+		text.WriteString("\r\n")
+	}
+	if cfg.PublicURL != "" {
+		fmt.Fprintf(&text, "View the ticket: %s/tickets/%d\r\n\r\n", strings.TrimRight(cfg.PublicURL, "/"), number)
+	}
+	text.WriteString(reason)
+	return text.String()
+}
+
+// clip truncates long text to a safe email snippet size.
+func clip(s string) string {
+	s = strings.TrimSpace(s)
+	if r := []rune(s); len(r) > 800 {
+		return string(r[:800]) + "…"
+	}
+	return s
+}
+
 // Reply composes and sends notifications for a new public reply on t.
 // It is a no-op when notifications are disabled or nobody qualifies.
 func Reply(st *store.Store, m Mailer, cfg store.NotifySettings, prefix string,
@@ -163,25 +190,33 @@ func Reply(st *store.Store, m Mailer, cfg store.NotifySettings, prefix string,
 		return err
 	}
 	num := fmt.Sprintf("%s%d", prefix, t.Number)
-	snippet := strings.TrimSpace(body)
-	if r := []rune(snippet); len(r) > 800 {
-		snippet = string(r[:800]) + "…"
-	}
-	var text strings.Builder
-	fmt.Fprintf(&text, "%s replied on ticket %s — %s:\r\n\r\n", authorName, num, t.Title)
-	if snippet != "" {
-		for _, line := range strings.Split(snippet, "\n") {
-			text.WriteString("> " + line + "\r\n")
-		}
-		text.WriteString("\r\n")
-	}
-	if cfg.PublicURL != "" {
-		fmt.Fprintf(&text, "View the ticket: %s/tickets/%d\r\n\r\n", strings.TrimRight(cfg.PublicURL, "/"), t.Number)
-	}
-	text.WriteString("You are receiving this email because you are part of this ticket.")
+	intro := fmt.Sprintf("%s replied on ticket %s — %s", authorName, num, t.Title)
 	return m.Send(cfg, Message{
 		To:      to,
 		Subject: fmt.Sprintf("Re: %s %s", num, t.Title),
-		Body:    text.String(),
+		Body: emailBody(intro, clip(body), cfg, t.Number,
+			"You are receiving this email because you are part of this ticket."),
+	})
+}
+
+// NewTicket emails all active admins (except the creator) about a newly
+// created ticket. It is a no-op unless the admin-new-ticket option is on,
+// notifications are enabled, and at least one admin has an email address.
+func NewTicket(st *store.Store, m Mailer, cfg store.NotifySettings, prefix string,
+	t *store.Ticket, creatorID int64, creatorName string) error {
+	if !cfg.Enabled || !cfg.AdminNewTicket || cfg.SMTPHost == "" {
+		return nil
+	}
+	to, err := st.AdminNotifyEmails(creatorID)
+	if err != nil || len(to) == 0 {
+		return err
+	}
+	num := fmt.Sprintf("%s%d", prefix, t.Number)
+	intro := fmt.Sprintf("%s created ticket %s — %s", creatorName, num, t.Title)
+	return m.Send(cfg, Message{
+		To:      to,
+		Subject: fmt.Sprintf("New ticket %s — %s", num, t.Title),
+		Body: emailBody(intro, clip(t.Description), cfg, t.Number,
+			"You are receiving this email because you are an IT administrator."),
 	})
 }

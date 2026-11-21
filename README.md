@@ -76,8 +76,10 @@ environment variables.
 Admins configure everything in the web UI under **Settings** — no environment variables
 or restarts: SMTP server/port (STARTTLS or implicit TLS on 465), optional credentials,
 From address, an optional public base URL that adds ticket links to emails, an
-enable/disable switch, and who gets notified (ticket creator only, or everyone involved
-in the ticket). A **Send test email** button verifies the setup instantly.
+enable/disable switch, who gets notified about replies (ticket creator only, or everyone
+involved in the ticket), and an optional switch that emails **all admins when a new
+ticket is created** (the creator is never emailed about their own ticket). A **Send test
+email** button verifies the setup instantly.
 
 The container ships a standard CA trust store, so public providers (Microsoft 365,
 Gmail, …) work with full certificate verification out of the box. For mail servers

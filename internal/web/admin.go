@@ -278,6 +278,7 @@ func settingsFromForm(r *http.Request) store.NotifySettings {
 		NotifyScope:     scope,
 		SMTPCACert:      strings.TrimSpace(r.FormValue("smtp_ca_pem")),
 		SMTPInsecureTLS: r.FormValue("smtp_tls_insecure") == "1",
+		AdminNewTicket:  r.FormValue("notify_admin_new") == "1",
 	}
 }
 

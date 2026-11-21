@@ -12,7 +12,7 @@ func TestNotifySettingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ns.Enabled || ns.SMTPPort != 587 || ns.NotifyScope != NotifyScopeParticipants {
+	if ns.Enabled || ns.SMTPPort != 587 || ns.NotifyScope != NotifyScopeParticipants || ns.AdminNewTicket {
 		t.Fatalf("unexpected defaults: %+v", ns)
 	}
 
@@ -21,6 +21,7 @@ func TestNotifySettingsRoundTrip(t *testing.T) {
 		SMTPUser: "relay", SMTPPassword: "secret", SMTPFrom: "ticketd@example.com",
 		PublicURL: "https://it.example.com", NotifyScope: NotifyScopeCreator,
 		SMTPCACert: "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----", SMTPInsecureTLS: true,
+		AdminNewTicket: true,
 	}
 	if err := s.SetNotifySettings(want); err != nil {
 		t.Fatal(err)
@@ -115,6 +116,43 @@ func TestSetEmailAndNotifyRecipients(t *testing.T) {
 		if e == "alice@example.com" {
 			t.Fatal("cleared address still notified")
 		}
+	}
+}
+
+// AdminNotifyEmails: all active admins with addresses, excluding the given
+// user; admins without an email or deactivated accounts are skipped.
+func TestAdminNotifyEmails(t *testing.T) {
+	s := newTestStore(t)
+
+	a1, _ := s.CreateUser("admin1", "Admin One", "pw12345678", "admin")
+	a2, _ := s.CreateUser("admin2", "Admin Two", "pw12345678", "admin")
+	a4, _ := s.CreateUser("admin4", "Admin Four", "pw12345678", "admin")
+	u1, _ := s.CreateUser("user1", "User One", "pw12345678", "user")
+	if _, err := s.CreateUser("admin3", "Admin Three", "pw12345678", "admin"); err != nil { // no email address
+		t.Fatal(err)
+	}
+	for id, e := range map[int64]string{a1.ID: "a1@example.com", a2.ID: "a2@example.com", a4.ID: "gone@example.com", u1.ID: "u1@example.com"} {
+		if err := s.SetEmail(id, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.SetActive(a4.ID, false); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := s.AdminNotifyEmails(u1.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"a1@example.com", "a2@example.com"} // a3 has no email, a4 is inactive
+	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+
+	// the acting admin is excluded from their own notification
+	got, _ = s.AdminNotifyEmails(a1.ID)
+	if len(got) != 1 || got[0] != "a2@example.com" {
+		t.Fatalf("creator exclusion: got %v", got)
 	}
 }
 

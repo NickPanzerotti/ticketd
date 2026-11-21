@@ -19,6 +19,7 @@ type NotifySettings struct {
 	NotifyScope     string // "creator" or "participants"
 	SMTPCACert      string // optional PEM CA certificate for private mail servers
 	SMTPInsecureTLS bool   // skip TLS verification (self-signed certs; opt-in)
+	AdminNewTicket  bool   // email all active admins when a ticket is created
 }
 
 const (
@@ -55,6 +56,7 @@ func (s *Store) GetNotifySettings() (NotifySettings, error) {
 	ns.PublicURL = vals["public_url"]
 	ns.SMTPCACert = vals["smtp_ca_pem"]
 	ns.SMTPInsecureTLS = vals["smtp_tls_insecure"] == "1"
+	ns.AdminNewTicket = vals["notify_admin_new"] == "1"
 	if vals["notify_scope"] == NotifyScopeCreator {
 		ns.NotifyScope = NotifyScopeCreator
 	}
@@ -84,6 +86,10 @@ func (s *Store) SetNotifySettings(ns NotifySettings) error {
 	if ns.SMTPInsecureTLS {
 		insecure = "1"
 	}
+	adminNew := "0"
+	if ns.AdminNewTicket {
+		adminNew = "1"
+	}
 	if err := s.tx(func(tx *sql.Tx) error {
 		for _, kv := range []struct{ k, v string }{
 			{"notify_enabled", enabled},
@@ -95,6 +101,7 @@ func (s *Store) SetNotifySettings(ns NotifySettings) error {
 			{"public_url", ns.PublicURL},
 			{"smtp_ca_pem", ns.SMTPCACert},
 			{"smtp_tls_insecure", insecure},
+			{"notify_admin_new", adminNew},
 		} {
 			if _, err := tx.Exec(`INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`, kv.k, kv.v, kv.v); err != nil {
 				return err
@@ -108,6 +115,28 @@ func (s *Store) SetNotifySettings(ns NotifySettings) error {
 		return up("smtp_pass", ns.SMTPPassword)
 	}
 	return nil
+}
+
+// AdminNotifyEmails returns the addresses of all active admins, excluding
+// excludeUserID — nobody is emailed about their own actions. Accounts
+// without an email address are skipped.
+func (s *Store) AdminNotifyEmails(excludeUserID int64) ([]string, error) {
+	rows, err := s.DB.Query(`SELECT email FROM users
+		WHERE role = 'admin' AND active = 1 AND email IS NOT NULL AND email <> '' AND id <> ?
+		ORDER BY username`, excludeUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var e string
+		if err := rows.Scan(&e); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, errors.Join(rows.Err(), err)
 }
 
 // TicketNotifyEmails returns the addresses that should be notified about a
